@@ -45,10 +45,10 @@ public class Console {
 				String[] fragments = line.split(",");
 				if (!fragments[0].equals("APS ID")) {
 					Student record = new Student(fragments[0], fragments[1],
-							fragments[2], fragments[3], fragments[4]);
+							fragments[2], fragments[3], fragments[4], fragments[5]);
 
 					log(fragments[0] + "|" + fragments[1] + "|" + fragments[2]
-							+ "|" + fragments[3] + "|" + fragments[4]);
+							+ "|" + fragments[3] + "|" + fragments[4]+ "|" + fragments[5]);
 					studentRecords.add(record);
 				}
 			}
@@ -74,7 +74,7 @@ public class Console {
 			jsonData = jsonData + "\"" + (counter++) + "\":" + "{\"id\":\""
 					+ record.id + "\",\"fname\":\"" + record.fname
 					+ "\",\"lname\":\"" + record.lname + "\",\"school\":\""
-					+ record.sname + "\",\"media\":\"" + record.media + "\"},";
+					+ record.sname + "\",\"media\":\"" + record.media + "\",\"vip\":\""+record.vip+"\"},";
 		}
 		jsonData = jsonData.substring(0, jsonData.length() - 1);
 		// jsonData = jsonData + "]}";
@@ -104,7 +104,7 @@ public class Console {
 					"EventData.json"));
 			String data = br.readLine();
 			br.close();
-			System.out.println(data);
+			log(data);
 
 			URL url = new URL(
 					"https://checkin-40775.firebaseio.com/students.json");
