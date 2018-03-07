@@ -3,11 +3,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -24,20 +22,13 @@ public class Console {
 	static String eventName = "";
 	static boolean debugMode = true;
 
-	public static void main(String args[]) throws UnsupportedEncodingException,
-			IOException {
-//		 generateCheckInCSV();
-//		pushStudentData();
-		// clearFirebase();
-	}
-
 	/**
 	 * Write Student data from eventdata json file
 	 */
-	public static void pushStudentData() {
+	public static void pushStudentData(String event) {
 		readStudentList();
-		createStudentJSON("Really cool event");
-		pushStudentDataToFirebase();
+		createStudentJSON();
+		pushStudentDataToFirebase(event);
 	}
 
 	/**
@@ -70,7 +61,7 @@ public class Console {
 	/**
 	 * Function to generate EventData json
 	 */
-	public static void createStudentJSON(String event) {
+	public static void createStudentJSON() {
 		// String jsonData =
 		// "{\"CheckIn\":[{\"id\":\"000\",\"media\":\"Y\",\"guests\":\"0\"}],\"Event\":{\"name\":\""
 		// + event + "\"}, \"students\":[";
@@ -105,16 +96,16 @@ public class Console {
 	/**
 	 * Function to write student data to firebase
 	 */
-	public static void pushStudentDataToFirebase() {
+	public static void pushStudentDataToFirebase(String event) {
 		log("Writing Student data to firebase");
 		try {
-			
+
 			BufferedReader br = new BufferedReader(new FileReader(
 					"EventData.json"));
-			String data=br.readLine();
+			String data = br.readLine();
+			br.close();
 			System.out.println(data);
-			
-			
+
 			URL url = new URL(
 					"https://checkin-40775.firebaseio.com/students.json");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -125,7 +116,16 @@ public class Console {
 			out.write(data);
 			out.close();
 			log(conn.getResponseCode());
-			
+
+			String eventData = "{\"name\":\"" + event + "\"}";
+			url = new URL("https://checkin-40775.firebaseio.com/Event.json");
+			conn = (HttpURLConnection) url.openConnection();
+			conn.setDoOutput(true);
+			conn.setRequestMethod("PUT");
+			out = new OutputStreamWriter(conn.getOutputStream());
+			out.write(eventData);
+			out.close();
+			log(conn.getResponseCode());
 
 		} catch (Exception e) {
 			log(e.getMessage());
@@ -170,6 +170,7 @@ public class Console {
 	public static void clearFirebase() {
 		clearStudents();
 		clearCheckIns();
+		clearEvent();
 	}
 
 	/**
@@ -180,37 +181,9 @@ public class Console {
 		try {
 			URL url = new URL(
 					"https://checkin-40775.firebaseio.com/students.json");
-
-			BufferedReader reader = new BufferedReader(new InputStreamReader(
-					url.openStream(), "UTF-8"));
-			String temp = "{\"students\":" + reader.readLine() + "}";
-			JSONObject json = new JSONObject(temp);
-			reader.close();
-			String data = json.get("students").toString();
-
-			// Checks number of student records in firebase
-			int count = 0;
-			for (int i = 0; i < data.length(); i++) {
-				if (data.charAt(i) == '{') {
-					count++;
-				}
-			}
-			log(count + " student records found");
-			if (count > 0) {
-				log("Starting delete of " + count + " records");
-				for (int i = 0; i < count; i++) {
-					url = new URL(
-							"https://checkin-40775.firebaseio.com/students/"
-									+ i + ".json");
-					HttpURLConnection conn = (HttpURLConnection) url
-							.openConnection();
-					conn.setRequestMethod("DELETE");
-					log(conn.getResponseCode());
-
-				}
-				log("Deleted " + count + " records");
-			}
-
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("DELETE");
+			log(conn.getResponseCode());
 		} catch (Exception e) {
 			log(e.getMessage());
 		}
@@ -224,37 +197,26 @@ public class Console {
 		try {
 			URL url = new URL(
 					"https://checkin-40775.firebaseio.com/CheckIn.json");
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("DELETE");
+			log(conn.getResponseCode());
 
-			BufferedReader reader = new BufferedReader(new InputStreamReader(
-					url.openStream(), "UTF-8"));
-			String temp = "{\"CheckIn\":" + reader.readLine() + "}";
-			JSONObject json = new JSONObject(temp);
-			reader.close();
-			String data = json.get("CheckIn").toString();
-			log(data);
-
-			// Checks number of student records in firebase
-			int count = 0;
-			for (int i = 0; i < data.length(); i++) {
-				if (data.charAt(i) == '{') {
-					count++;
-				}
-			}
-			log(count + " check in records found");
-			if (count > 0) {
-				log("Starting delete of " + count + " records");
-				for (int i = 0; i < count; i++) {
-					url = new URL(
-							"https://checkin-40775.firebaseio.com/CheckIn/" + i
-									+ ".json");
-					HttpURLConnection conn = (HttpURLConnection) url
-							.openConnection();
-					conn.setRequestMethod("DELETE");
-					log(conn.getResponseCode());
-
-				}
-				log("Deleted " + count + " records");
-			}
+		} catch (Exception e) {
+			log(e.getMessage());
+		}
+	}
+	
+	/**
+	 * Functoin to clear check in data from firebase
+	 */
+	public static void clearEvent() {
+		log("Clearing Event details from firebase");
+		try {
+			URL url = new URL(
+					"https://checkin-40775.firebaseio.com/Event.json");
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("DELETE");
+			log(conn.getResponseCode());
 
 		} catch (Exception e) {
 			log(e.getMessage());
@@ -374,36 +336,39 @@ public class Console {
 	 * 
 	 * @throws FileNotFoundException
 	 */
-	public static void createCheckInCSV() throws FileNotFoundException {
-		PrintWriter pw = new PrintWriter(new File(formatCheckInFileName()));
-		StringBuilder sb = new StringBuilder();
-		// Generate file headers
-		sb.append("Event Name");
-		sb.append(',');
-		sb.append("APS ID");
-		sb.append(',');
-		sb.append("Guests");
-		sb.append(',');
-		sb.append("Media");
-		sb.append('\n');
-
-		// Add data
-		for (CheckIn record : checkInRecords) {
-			sb.append(eventName);
+	public static void createCheckInCSV() {
+		try {
+			PrintWriter pw = new PrintWriter(new File(formatCheckInFileName()));
+			StringBuilder sb = new StringBuilder();
+			// Generate file headers
+			sb.append("Event Name");
 			sb.append(',');
-			sb.append(record.id);
+			sb.append("APS ID");
 			sb.append(',');
-			sb.append(record.guests);
+			sb.append("Guests");
 			sb.append(',');
-			sb.append(record.media);
+			sb.append("Media");
 			sb.append('\n');
+
+			// Add data
+			for (CheckIn record : checkInRecords) {
+				sb.append(eventName);
+				sb.append(',');
+				sb.append(record.id);
+				sb.append(',');
+				sb.append(record.guests);
+				sb.append(',');
+				sb.append(record.media);
+				sb.append('\n');
+			}
+
+			pw.write(sb.toString());
+			pw.close();
+
+			log("Check In file created for " + eventName);
+		} catch (Exception e) {
+			log(e.getMessage());
 		}
-
-		pw.write(sb.toString());
-		pw.close();
-
-		log("Check In file created for " + eventName);
-
 	}
 
 	/**
