@@ -1,0 +1,421 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+
+import org.json.JSONObject;
+
+public class Console {
+
+	static List<CheckIn> checkInRecords = new ArrayList<CheckIn>();
+	static List<Student> studentRecords = new ArrayList<Student>();
+	static String eventName = "";
+	static boolean debugMode = true;
+
+	public static void main(String args[]) throws UnsupportedEncodingException,
+			IOException {
+//		 generateCheckInCSV();
+//		pushStudentData();
+		// clearFirebase();
+	}
+
+	/**
+	 * Write Student data from eventdata json file
+	 */
+	public static void pushStudentData() {
+		readStudentList();
+		createStudentJSON("Really cool event");
+		pushStudentDataToFirebase();
+	}
+
+	/**
+	 * Function to read data from studentList.csv and add to studentRecords
+	 * object
+	 */
+	public static void readStudentList() {
+		log("Reading from Student data");
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(
+					"studentList.csv"));
+			String line = "";
+			while ((line = br.readLine()) != null) {
+				String[] fragments = line.split(",");
+				if (!fragments[0].equals("APS ID")) {
+					Student record = new Student(fragments[0], fragments[1],
+							fragments[2], fragments[3], fragments[4]);
+
+					log(fragments[0] + "|" + fragments[1] + "|" + fragments[2]
+							+ "|" + fragments[3] + "|" + fragments[4]);
+					studentRecords.add(record);
+				}
+			}
+			br.close();
+		} catch (Exception e) {
+			log(e.getMessage());
+		}
+	}
+
+	/**
+	 * Function to generate EventData json
+	 */
+	public static void createStudentJSON(String event) {
+		// String jsonData =
+		// "{\"CheckIn\":[{\"id\":\"000\",\"media\":\"Y\",\"guests\":\"0\"}],\"Event\":{\"name\":\""
+		// + event + "\"}, \"students\":[";
+
+		// String jsonData = "{\"students\":[";
+		String jsonData = "{";
+
+		int counter = 0;
+		for (Student record : studentRecords) {
+			jsonData = jsonData + "\"" + (counter++) + "\":" + "{\"id\":\""
+					+ record.id + "\",\"fname\":\"" + record.fname
+					+ "\",\"lname\":\"" + record.lname + "\",\"school\":\""
+					+ record.sname + "\",\"media\":\"" + record.media + "\"},";
+		}
+		jsonData = jsonData.substring(0, jsonData.length() - 1);
+		// jsonData = jsonData + "]}";
+		jsonData = jsonData + "}";
+
+		JSONObject json = new JSONObject(jsonData);
+		log(json.toString());
+		try {
+			FileWriter pw = new FileWriter(new File("EventData.json"));
+			StringBuilder sb = new StringBuilder();
+			sb.append(json.toString());
+			pw.write(sb.toString());
+			pw.close();
+		} catch (Exception e) {
+			log(e.getMessage());
+		}
+	}
+
+	/**
+	 * Function to write student data to firebase
+	 */
+	public static void pushStudentDataToFirebase() {
+		log("Writing Student data to firebase");
+		try {
+			
+			BufferedReader br = new BufferedReader(new FileReader(
+					"EventData.json"));
+			String data=br.readLine();
+			System.out.println(data);
+			
+			
+			URL url = new URL(
+					"https://checkin-40775.firebaseio.com/students.json");
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setDoOutput(true);
+			conn.setRequestMethod("PUT");
+			OutputStreamWriter out = new OutputStreamWriter(
+					conn.getOutputStream());
+			out.write(data);
+			out.close();
+			log(conn.getResponseCode());
+			
+
+		} catch (Exception e) {
+			log(e.getMessage());
+		}
+	}
+
+	/**
+	 * Function to generate check in csv
+	 */
+	public static void generateCheckInCSV() {
+		readEventName();
+		readCheckIns();
+	}
+
+	/**
+	 * Function to read event name from firebase
+	 */
+	public static void readEventName() {
+		log("Reading Event Name");
+		try {
+			URL url = new URL("https://checkin-40775.firebaseio.com/Event.json");
+			try (BufferedReader reader = new BufferedReader(
+					new InputStreamReader(url.openStream(), "UTF-8"))) {
+				for (String line; (line = reader.readLine()) != null;) {
+					JSONObject json = new JSONObject(line);
+					Iterator<String> keys = json.keys();
+					while (keys.hasNext()) {
+						eventName = json.get(keys.next()).toString();
+						log("Event Name: " + eventName);
+					}
+
+				}
+			}
+		} catch (Exception e) {
+			log(e.getMessage());
+		}
+	}
+
+	/**
+	 * Function to clear data from firebase
+	 */
+	public static void clearFirebase() {
+		clearStudents();
+		clearCheckIns();
+	}
+
+	/**
+	 * Function to clear student data from firbase
+	 */
+	public static void clearStudents() {
+		log("Clearing Student data from firebase");
+		try {
+			URL url = new URL(
+					"https://checkin-40775.firebaseio.com/students.json");
+
+			BufferedReader reader = new BufferedReader(new InputStreamReader(
+					url.openStream(), "UTF-8"));
+			String temp = "{\"students\":" + reader.readLine() + "}";
+			JSONObject json = new JSONObject(temp);
+			reader.close();
+			String data = json.get("students").toString();
+
+			// Checks number of student records in firebase
+			int count = 0;
+			for (int i = 0; i < data.length(); i++) {
+				if (data.charAt(i) == '{') {
+					count++;
+				}
+			}
+			log(count + " student records found");
+			if (count > 0) {
+				log("Starting delete of " + count + " records");
+				for (int i = 0; i < count; i++) {
+					url = new URL(
+							"https://checkin-40775.firebaseio.com/students/"
+									+ i + ".json");
+					HttpURLConnection conn = (HttpURLConnection) url
+							.openConnection();
+					conn.setRequestMethod("DELETE");
+					log(conn.getResponseCode());
+
+				}
+				log("Deleted " + count + " records");
+			}
+
+		} catch (Exception e) {
+			log(e.getMessage());
+		}
+	}
+
+	/**
+	 * Functoin to clear check in data from firebase
+	 */
+	public static void clearCheckIns() {
+		log("Clearing Student data from firebase");
+		try {
+			URL url = new URL(
+					"https://checkin-40775.firebaseio.com/CheckIn.json");
+
+			BufferedReader reader = new BufferedReader(new InputStreamReader(
+					url.openStream(), "UTF-8"));
+			String temp = "{\"CheckIn\":" + reader.readLine() + "}";
+			JSONObject json = new JSONObject(temp);
+			reader.close();
+			String data = json.get("CheckIn").toString();
+			log(data);
+
+			// Checks number of student records in firebase
+			int count = 0;
+			for (int i = 0; i < data.length(); i++) {
+				if (data.charAt(i) == '{') {
+					count++;
+				}
+			}
+			log(count + " check in records found");
+			if (count > 0) {
+				log("Starting delete of " + count + " records");
+				for (int i = 0; i < count; i++) {
+					url = new URL(
+							"https://checkin-40775.firebaseio.com/CheckIn/" + i
+									+ ".json");
+					HttpURLConnection conn = (HttpURLConnection) url
+							.openConnection();
+					conn.setRequestMethod("DELETE");
+					log(conn.getResponseCode());
+
+				}
+				log("Deleted " + count + " records");
+			}
+
+		} catch (Exception e) {
+			log(e.getMessage());
+		}
+	}
+
+	/**
+	 * Function to read check in data from firebase
+	 */
+	public static void readCheckIns() {
+		log("Reading Check In data");
+		try {
+			URL url = new URL(
+					"https://checkin-40775.firebaseio.com/CheckIn.json");
+			try (BufferedReader reader = new BufferedReader(
+					new InputStreamReader(url.openStream(), "UTF-8"))) {
+				for (String line; (line = reader.readLine()) != null;) {
+					JSONObject json = new JSONObject(line);
+					Iterator<String> keys = json.keys();
+					while (keys.hasNext()) {
+
+						String temp = json.get(keys.next()).toString();
+						formatObject(new JSONObject(temp));
+					}
+
+				}
+				removeDuplicates();
+				if (debugMode) {
+					printCheckIns();
+				}
+				createCheckInCSV();
+			}
+		} catch (Exception e) {
+			log(e.getMessage());
+		}
+	}
+
+	/**
+	 * Function to format the firebase check in record into custom object
+	 * 
+	 * @param json
+	 *            JSONObject
+	 */
+	public static void formatObject(JSONObject json) {
+		String id = json.getString("id");
+		String guests = json.getString("guests");
+		String media = json.getString("media");
+
+		// Convert media indicator to true/false
+		if (media.equals("Y")) {
+			media = "true";
+		} else if (media.equals("N")) {
+			media = "false";
+		}
+
+		log("Formating record with id: " + id);
+		if (!id.equals("000")) {
+			CheckIn record = new CheckIn(id, guests, media);
+			checkInRecords.add(record);
+			log("Added record with id: " + id);
+		} else {
+			log("Dummy record not added");
+		}
+	}
+
+	/**
+	 * Function used to remove duplicate check in records
+	 */
+	public static void removeDuplicates() {
+		log("--- Removing duplicate records ---");
+		HashMap<String, CheckIn> map = new HashMap<String, CheckIn>();
+		List<CheckIn> tempCheckInRecords = new ArrayList<CheckIn>();
+		for (int i = 0; i < checkInRecords.size(); i++) {
+			CheckIn record = checkInRecords.get(i);
+			if (!map.containsKey(record.id)) {
+				tempCheckInRecords.add(record);
+				map.put(record.id, record);
+			} else {
+				log("Found duplicate for id: " + record.id);
+			}
+		}
+		checkInRecords = tempCheckInRecords;
+	}
+
+	/**
+	 * Function used to print processed check in records to console
+	 */
+	public static void printCheckIns() {
+		log("Processed Check In Records");
+		for (CheckIn record : checkInRecords) {
+			System.out.println("id: " + record.id);
+			System.out.println("guests: " + record.guests);
+			System.out.println("media: " + record.media);
+			System.out.println();
+		}
+	}
+
+	/**
+	 * Function to create a file name for the check in csv using the event name
+	 * 
+	 * @return String
+	 */
+	public static String formatCheckInFileName() {
+		String temp = "";
+		String[] fragments = eventName.split(" ");
+		for (String fragment : fragments) {
+			temp = temp + fragment;
+		}
+		temp = temp + ".csv";
+		log(temp);
+		return temp;
+
+	}
+
+	/**
+	 * Function to generate check in csv
+	 * 
+	 * @throws FileNotFoundException
+	 */
+	public static void createCheckInCSV() throws FileNotFoundException {
+		PrintWriter pw = new PrintWriter(new File(formatCheckInFileName()));
+		StringBuilder sb = new StringBuilder();
+		// Generate file headers
+		sb.append("Event Name");
+		sb.append(',');
+		sb.append("APS ID");
+		sb.append(',');
+		sb.append("Guests");
+		sb.append(',');
+		sb.append("Media");
+		sb.append('\n');
+
+		// Add data
+		for (CheckIn record : checkInRecords) {
+			sb.append(eventName);
+			sb.append(',');
+			sb.append(record.id);
+			sb.append(',');
+			sb.append(record.guests);
+			sb.append(',');
+			sb.append(record.media);
+			sb.append('\n');
+		}
+
+		pw.write(sb.toString());
+		pw.close();
+
+		log("Check In file created for " + eventName);
+
+	}
+
+	/**
+	 * Function to print messages to console in DEBUG mode
+	 * 
+	 * @param message
+	 *            String
+	 */
+	public static void log(Object message) {
+		if (debugMode) {
+			System.out.println(message.toString());
+		}
+	}
+
+}
