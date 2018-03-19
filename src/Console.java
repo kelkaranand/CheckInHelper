@@ -21,14 +21,22 @@ public class Console {
 	static List<Student> studentRecords = new ArrayList<Student>();
 	static String eventName = "";
 	static boolean debugMode = true;
+	static Encrypter encrypter=new Encrypter();
+	static boolean encryption =true;
 
 	/**
 	 * Write Student data from eventdata json file
 	 */
 	public static void pushStudentData(String event) {
+		clearLocalStudentList();
 		readStudentList();
 		createStudentJSON();
 		pushStudentDataToFirebase(event);
+	}
+	
+	public static void clearLocalStudentList()
+	{
+		studentRecords= new ArrayList<Student>();
 	}
 
 	/**
@@ -37,6 +45,7 @@ public class Console {
 	 */
 	public static void readStudentList() {
 		log("Reading from Student data");
+		encrypter.initialize();
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(
 					"studentList.csv"));
@@ -44,8 +53,16 @@ public class Console {
 			while ((line = br.readLine()) != null) {
 				String[] fragments = line.split(",");
 				if (!fragments[0].equals("APS ID")) {
-					Student record = new Student(fragments[0], fragments[1],
-							fragments[2], fragments[3], fragments[4], fragments[5]);
+					Student record;
+					if(encryption){
+						
+					record = new Student(fragments[0], encrypter.encrypt(fragments[1]),
+							encrypter.encrypt(fragments[2]), encrypter.encrypt(fragments[3]), fragments[4], fragments[5]);
+					}
+					else{
+					record = new Student(fragments[0], fragments[1],
+								fragments[2], fragments[3], fragments[4], fragments[5]);
+					}
 
 					log(fragments[0] + "|" + fragments[1] + "|" + fragments[2]
 							+ "|" + fragments[3] + "|" + fragments[4]+ "|" + fragments[5]);
@@ -107,7 +124,7 @@ public class Console {
 			log(data);
 
 			URL url = new URL(
-					"https://checkin-40775.firebaseio.com/students.json");
+					"https://checkin-e07f4.firebaseio.com/students.json");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setDoOutput(true);
 			conn.setRequestMethod("PUT");
@@ -118,7 +135,7 @@ public class Console {
 			log(conn.getResponseCode());
 
 			String eventData = "{\"name\":\"" + event + "\"}";
-			url = new URL("https://checkin-40775.firebaseio.com/Event.json");
+			url = new URL("https://checkin-e07f4.firebaseio.com/Event.json");
 			conn = (HttpURLConnection) url.openConnection();
 			conn.setDoOutput(true);
 			conn.setRequestMethod("PUT");
@@ -146,7 +163,7 @@ public class Console {
 	public static void readEventName() {
 		log("Reading Event Name");
 		try {
-			URL url = new URL("https://checkin-40775.firebaseio.com/Event.json");
+			URL url = new URL("https://checkin-e07f4.firebaseio.com/Event.json");
 			try (BufferedReader reader = new BufferedReader(
 					new InputStreamReader(url.openStream(), "UTF-8"))) {
 				for (String line; (line = reader.readLine()) != null;) {
@@ -180,7 +197,7 @@ public class Console {
 		log("Clearing Student data from firebase");
 		try {
 			URL url = new URL(
-					"https://checkin-40775.firebaseio.com/students.json");
+					"https://checkin-e07f4.firebaseio.com/students.json");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("DELETE");
 			log(conn.getResponseCode());
@@ -196,7 +213,7 @@ public class Console {
 		log("Clearing Student data from firebase");
 		try {
 			URL url = new URL(
-					"https://checkin-40775.firebaseio.com/CheckIn.json");
+					"https://checkin-e07f4.firebaseio.com/CheckIn.json");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("DELETE");
 			log(conn.getResponseCode());
@@ -213,7 +230,7 @@ public class Console {
 		log("Clearing Event details from firebase");
 		try {
 			URL url = new URL(
-					"https://checkin-40775.firebaseio.com/Event.json");
+					"https://checkin-e07f4.firebaseio.com/Event.json");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("DELETE");
 			log(conn.getResponseCode());
@@ -230,7 +247,7 @@ public class Console {
 		log("Reading Check In data");
 		try {
 			URL url = new URL(
-					"https://checkin-40775.firebaseio.com/CheckIn.json");
+					"https://checkin-e07f4.firebaseio.com/CheckIn.json");
 			try (BufferedReader reader = new BufferedReader(
 					new InputStreamReader(url.openStream(), "UTF-8"))) {
 				for (String line; (line = reader.readLine()) != null;) {

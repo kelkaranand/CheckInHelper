@@ -1,11 +1,8 @@
-/CheckIn.class
-/Console.class
 /Student.class
 /javax.ws.rs-api-2.1-javadoc.jar
-/javax.ws.rs-api-2.1-sources.jar
-/javax.ws.rs-api-2.1.jar
-/json-20180130.jar
-/Display.class
+/CheckIn.class
+/Console.class
 /Display$1.class
-/FirstSwingExample.class
 /Display$2.class
+/Display.class
+/Encrypter.class
