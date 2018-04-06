@@ -23,15 +23,41 @@ public class Console {
 	static boolean debugMode = true;
 	static Encrypter encrypter=new Encrypter();
 	static boolean encryption =true;
+	static String logs="";
+	static String db="";
 
+	/**
+	 * Read firebase db address checkin-e07f4
+	 */
+	public void initialize()
+	{
+		try{
+			BufferedReader br = new BufferedReader(new FileReader("config.txt"));
+			String line="";
+			while((line = br.readLine())!=null)
+			{
+				db=line;
+			}
+		}
+		catch(Exception e)
+		{
+			log("Error initializeing desktop app.");
+			addToLog("Error initializeing desktop app.");
+		}
+	}
+	
+	
 	/**
 	 * Write Student data from eventdata json file
 	 */
 	public static void pushStudentData(String event) {
 		clearLocalStudentList();
 		readStudentList();
+		addToLog("Data read from csv");
 		createStudentJSON();
+		addToLog("JSON created");
 		pushStudentDataToFirebase(event);
+		addToLog("Push successful");
 	}
 	
 	public static void clearLocalStudentList()
@@ -45,6 +71,7 @@ public class Console {
 	 */
 	public static void readStudentList() {
 		log("Reading from Student data");
+		addToLog("Reading from Student data");
 		encrypter.initialize();
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(
@@ -66,12 +93,16 @@ public class Console {
 
 					log(fragments[0] + "|" + fragments[1] + "|" + fragments[2]
 							+ "|" + fragments[3] + "|" + fragments[4]+ "|" + fragments[5]);
+					addToLog(fragments[0] + "|" + fragments[1] + "|" + fragments[2]
+							+ "|" + fragments[3] + "|" + fragments[4]+ "|" + fragments[5]);
+					
 					studentRecords.add(record);
 				}
 			}
 			br.close();
 		} catch (Exception e) {
 			log(e.getMessage());
+			addToLog(e.getMessage());
 		}
 	}
 
@@ -84,6 +115,10 @@ public class Console {
 		// + event + "\"}, \"students\":[";
 
 		// String jsonData = "{\"students\":[";
+		
+		addToLog("Creating student json");
+		JSONObject json=null; 
+		try{
 		String jsonData = "{";
 
 		int counter = 0;
@@ -97,16 +132,23 @@ public class Console {
 		// jsonData = jsonData + "]}";
 		jsonData = jsonData + "}";
 
-		JSONObject json = new JSONObject(jsonData);
+		json = new JSONObject(jsonData);
 		log(json.toString());
+		addToLog(json.toString());
+		}
+		catch(Exception e)
+		{
+			addToLog(e.getMessage());
+		}
 		try {
-			FileWriter pw = new FileWriter(new File("EventData.json"));
+			PrintWriter pw = new PrintWriter(new File("EventData.json"));
 			StringBuilder sb = new StringBuilder();
 			sb.append(json.toString());
 			pw.write(sb.toString());
 			pw.close();
 		} catch (Exception e) {
 			log(e.getMessage());
+			addToLog(e.getMessage());
 		}
 	}
 
@@ -115,6 +157,7 @@ public class Console {
 	 */
 	public static void pushStudentDataToFirebase(String event) {
 		log("Writing Student data to firebase");
+		addToLog("Writing Student data to firebase");
 		try {
 
 			BufferedReader br = new BufferedReader(new FileReader(
@@ -124,7 +167,7 @@ public class Console {
 			log(data);
 
 			URL url = new URL(
-					"https://checkin-e07f4.firebaseio.com/students.json");
+					"https://"+db+".firebaseio.com/students.json");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setDoOutput(true);
 			conn.setRequestMethod("PUT");
@@ -135,7 +178,7 @@ public class Console {
 			log(conn.getResponseCode());
 
 			String eventData = "{\"name\":\"" + event + "\"}";
-			url = new URL("https://checkin-e07f4.firebaseio.com/Event.json");
+			url = new URL("https://"+db+".firebaseio.com/Event.json");
 			conn = (HttpURLConnection) url.openConnection();
 			conn.setDoOutput(true);
 			conn.setRequestMethod("PUT");
@@ -146,6 +189,7 @@ public class Console {
 
 		} catch (Exception e) {
 			log(e.getMessage());
+			addToLog(e.getMessage());
 		}
 	}
 
@@ -162,8 +206,9 @@ public class Console {
 	 */
 	public static void readEventName() {
 		log("Reading Event Name");
+		addToLog("Reading Event Name");
 		try {
-			URL url = new URL("https://checkin-e07f4.firebaseio.com/Event.json");
+			URL url = new URL("https://"+db+".firebaseio.com/Event.json");
 			try (BufferedReader reader = new BufferedReader(
 					new InputStreamReader(url.openStream(), "UTF-8"))) {
 				for (String line; (line = reader.readLine()) != null;) {
@@ -178,6 +223,7 @@ public class Console {
 			}
 		} catch (Exception e) {
 			log(e.getMessage());
+			addToLog(e.getMessage());
 		}
 	}
 
@@ -195,14 +241,16 @@ public class Console {
 	 */
 	public static void clearStudents() {
 		log("Clearing Student data from firebase");
+		addToLog("Clearing Student data from firebase");
 		try {
 			URL url = new URL(
-					"https://checkin-e07f4.firebaseio.com/students.json");
+					"https://"+db+".firebaseio.com/students.json");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("DELETE");
 			log(conn.getResponseCode());
 		} catch (Exception e) {
 			log(e.getMessage());
+			addToLog(e.getMessage());
 		}
 	}
 
@@ -211,15 +259,17 @@ public class Console {
 	 */
 	public static void clearCheckIns() {
 		log("Clearing Student data from firebase");
+		addToLog("Clearing Student data from firebase");
 		try {
 			URL url = new URL(
-					"https://checkin-e07f4.firebaseio.com/CheckIn.json");
+					"https://"+db+".firebaseio.com/CheckIn.json");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("DELETE");
 			log(conn.getResponseCode());
 
 		} catch (Exception e) {
 			log(e.getMessage());
+			addToLog(e.getMessage());
 		}
 	}
 	
@@ -228,15 +278,17 @@ public class Console {
 	 */
 	public static void clearEvent() {
 		log("Clearing Event details from firebase");
+		addToLog("Clearing Event details from firebase");
 		try {
 			URL url = new URL(
-					"https://checkin-e07f4.firebaseio.com/Event.json");
+					"https://"+db+".firebaseio.com/Event.json");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("DELETE");
 			log(conn.getResponseCode());
 
 		} catch (Exception e) {
 			log(e.getMessage());
+			addToLog(e.getMessage());
 		}
 	}
 
@@ -245,18 +297,21 @@ public class Console {
 	 */
 	public static void readCheckIns() {
 		log("Reading Check In data");
+		addToLog("Reading Check In data");
 		try {
 			URL url = new URL(
-					"https://checkin-e07f4.firebaseio.com/CheckIn.json");
+					"https://"+db+".firebaseio.com/CheckIn.json");
 			try (BufferedReader reader = new BufferedReader(
 					new InputStreamReader(url.openStream(), "UTF-8"))) {
 				for (String line; (line = reader.readLine()) != null;) {
-					JSONObject json = new JSONObject(line);
-					Iterator<String> keys = json.keys();
-					while (keys.hasNext()) {
+					if (!line.equals("null")) {
+						JSONObject json = new JSONObject(line);
+						Iterator<String> keys = json.keys();
+						while (keys.hasNext()) {
 
-						String temp = json.get(keys.next()).toString();
-						formatObject(new JSONObject(temp));
+							String temp = json.get(keys.next()).toString();
+							formatObject(new JSONObject(temp));
+						}
 					}
 
 				}
@@ -268,6 +323,7 @@ public class Console {
 			}
 		} catch (Exception e) {
 			log(e.getMessage());
+			addToLog(e.getMessage());
 		}
 	}
 
@@ -304,18 +360,20 @@ public class Console {
 	 */
 	public static void removeDuplicates() {
 		log("--- Removing duplicate records ---");
-		HashMap<String, CheckIn> map = new HashMap<String, CheckIn>();
-		List<CheckIn> tempCheckInRecords = new ArrayList<CheckIn>();
-		for (int i = 0; i < checkInRecords.size(); i++) {
-			CheckIn record = checkInRecords.get(i);
-			if (!map.containsKey(record.id)) {
-				tempCheckInRecords.add(record);
-				map.put(record.id, record);
-			} else {
-				log("Found duplicate for id: " + record.id);
+		if (!checkInRecords.isEmpty()) {
+			HashMap<String, CheckIn> map = new HashMap<String, CheckIn>();
+			List<CheckIn> tempCheckInRecords = new ArrayList<CheckIn>();
+			for (int i = 0; i < checkInRecords.size(); i++) {
+				CheckIn record = checkInRecords.get(i);
+				if (!map.containsKey(record.id)) {
+					tempCheckInRecords.add(record);
+					map.put(record.id, record);
+				} else {
+					log("Found duplicate for id: " + record.id);
+				}
 			}
+			checkInRecords = tempCheckInRecords;
 		}
-		checkInRecords = tempCheckInRecords;
 	}
 
 	/**
@@ -337,7 +395,7 @@ public class Console {
 	 * @return String
 	 */
 	public static String formatCheckInFileName() {
-		String temp = "";
+		String temp = "Check-in Data/";
 		String[] fragments = eventName.split(" ");
 		for (String fragment : fragments) {
 			temp = temp + fragment;
@@ -368,15 +426,17 @@ public class Console {
 			sb.append('\n');
 
 			// Add data
-			for (CheckIn record : checkInRecords) {
-				sb.append(eventName);
-				sb.append(',');
-				sb.append(record.id);
-				sb.append(',');
-				sb.append(record.guests);
-				sb.append(',');
-				sb.append(record.media);
-				sb.append('\n');
+			if (!checkInRecords.isEmpty()) {
+				for (CheckIn record : checkInRecords) {
+					sb.append(eventName);
+					sb.append(',');
+					sb.append(record.id);
+					sb.append(',');
+					sb.append(record.guests);
+					sb.append(',');
+					sb.append(record.media);
+					sb.append('\n');
+				}
 			}
 
 			pw.write(sb.toString());
@@ -398,6 +458,22 @@ public class Console {
 		if (debugMode) {
 			System.out.println(message.toString());
 		}
+	}
+	
+	public static void addToLog(String x)
+	{
+		logs=logs+"\n"+x;
+		try {
+			PrintWriter pw = new PrintWriter(new File("logs.txt"));
+			StringBuilder sb = new StringBuilder();
+			sb.append(logs);
+			pw.write(sb.toString());
+			pw.close();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 
 }

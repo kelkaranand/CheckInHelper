@@ -22,6 +22,8 @@ public class Display extends Canvas {
 
 	public static void main(String[] args) {
 		final Console console = new Console();
+		console.initialize();
+//		System.out.println(console.encrypter.decrypt(console.encrypter.encrypt("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")));
 
 		Display m = new Display();
 
